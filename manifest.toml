@@ -3,92 +3,68 @@
 packaging_format = 2
 
 id = "entephotos"
-name = "Ente Photos"
-description.en = "A simple and secure photo hosting solution by Ente.io"
-description.fr = "Une solution simple et sécurisée d'hébergement de photos par Ente.io"
-description.tr = "Ente.io tarafından sunulan basit ve güvenli bir fotoğraf barındırma çözümü"
-
-version = "1.0~ynh1"
-
-maintainers = ["breakfastdeep"]
-
-[upstream]
+name = "Ente Photos (Standalone)"
+version = "0.1~ynh1"
 license = "AGPL-3.0-or-later"
-website = "https://ente.io"
-demo = "https://demo.ente.io"
-admindoc = "https://github.com/ente-io/ente/blob/main/docs/admin.md"
-userdoc = "https://github.com/ente-io/ente/blob/main/docs/user.md"
-code = "https://github.com/ente-io/ente"
-cpe = "cpe:2.3:a:ente:ente_photos"
-fund = "https://github.com/sponsors/ente-io"
+url = "https://github.com/ente-io/ente"
+description.en = "Stand-alone Ente self-hosted encrypted photo backup and sharing server"
+description.tr = "Docker’sız, kendi kendine barındırılan şifreli fotoğraf yedekleme ve paylaşım sunucusu"
+
+maintainers = ["yourgithubusername"]
 
 [integration]
-yunohost = ">= 12.0.9"
+yunohost = ">= 12.0"
 helpers_version = "2.14"
 architectures = "all"
-multi_instance = true
+multi_instance = false
 ldap = "true"
-sso = "true"
-disk = "500M"
-ram.build = "200M"
-ram.runtime = "300M"
+sso = "false"
+disk = "1G"
+ram.build = "500M"
+ram.runtime = "500M"
 
 [install]
-
+  # sorulacak parametreler
   [install.domain]
   type = "domain"
 
   [install.path]
   type = "path"
-  default = "/"
-
-  [install.init_main_permission]
-  type = "group"
-  default = "all_users"
-
-  [install.language]
-  ask.en = "Choose the language for Ente Photos"
-  ask.fr = "Choisissez la langue pour Ente Photos"
-  ask.tr = "Ente Photos için dili seçin"
-  type = "select"
-  choices = ["en", "fr", "tr"]
-  default = "tr"
+  default = "/entephotos"
 
   [install.admin]
   type = "user"
 
   [install.password]
-  help.en = "Enter the password for the Ente Photos admin user"
-  help.fr = "Entrez le mot de passe pour l'utilisateur admin d'Ente Photos"
-  help.tr = "Ente Photos yönetici kullanıcısı için şifreyi girin"
   type = "password"
+  help.en = "Password for the Ente Photos admin user"
+  help.tr = "Ente Photos yönetici kullanıcısı şifresi"
+
+  # hangi script çalışacak
+  exec = "scripts/install"
 
 [resources]
-
-  [resources.sources]
-
-    [resources.sources.main]
-    url = "https://github.com/ente-io/ente/archive/refs/heads/main.tar.gz"
-    sha256 = "24b12283ba54fdc7d65dd747a3927190ebbd2da1575d362d52b3e71b576d6485"
-
+  # Sistem kullanıcı
   [resources.system_user]
   name = "entephotos"
 
+  # Uygulamanın kök dizini
   [resources.install_dir]
   path = "/var/www/entephotos"
 
+  # Veri dizini
   [resources.data_dir]
   path = "/home/yunohost.app/entephotos"
-
+  
+  # Reverse-proxy için nginx
   [resources.permissions]
-  main.url = "/ente"
+  main.url = "/entephotos"
 
-  [resources.ports]
-  # YunoHost rastgele reverse proxy portu atar, elle genellikle yazılmaz.
-
+  # Uygulamanın çalışması için ihtiyaç duyduğu apt paketleri
   [resources.apt]
-  packages = "nodejs npm nginx mariadb-server"
+  packages = "git golang-go build-essential pkg-config nodejs npm libsodium-dev mysql-server"
 
+  # MySQL veritabanı tanımı
   [resources.database]
   type = "mysql"
-  # Bu ayar YunoHost tarafından otomatik yapılır, değiştirmen gerekmez
+  # Kullanıcı, veritabanı ve şifreyi YunoHost otomatik oluşturacak ve script içinde yüklenecek

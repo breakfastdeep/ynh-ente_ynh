@@ -1,0 +1,104 @@
+#!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# INITIALIZE AND STORE SETTINGS
+#=================================================
+
+# Example custom setting (optional)
+foo="bar"
+ynh_app_setting_set --key=foo --value=$foo
+
+# PHP upload limits example (if needed)
+ynh_app_setting_set --key=php_upload_max_filesize --value=50M
+ynh_app_setting_set --key=php_post_max_size --value=50M
+
+#=================================================
+# CHECK DISK SPACE
+#=================================================
+
+MIN_DISK_SPACE=$((750 * 1024 * 1024 * 1024))  # 750 GB in bytes
+
+# Get available disk space (in bytes) on the partition where $install_dir resides
+AVAILABLE_DISK_SPACE=$(df --output=avail -B1 "$install_dir" | tail -1)
+
+if [ "$AVAILABLE_DISK_SPACE" -lt "$MIN_DISK_SPACE" ]; then
+    ynh_die "Not enough free disk space! At least 750 GB of free space is required."
+fi
+
+ynh_script_progression "Disk space check passed. ($AVAILABLE_DISK_SPACE bytes available)"
+
+#=================================================
+# DOWNLOAD, VERIFY AND UNPACK SOURCE
+#=================================================
+
+ynh_script_progression "Downloading and extracting source files..."
+
+# Download, verify, extract and patch source according to manifest.toml
+ynh_setup_source --dest_dir="$install_dir"
+
+# Fix ownership (www-data user and app user)
+chown -R "$app:www-data" "$install_dir"
+
+#=================================================
+# APP INITIAL CONFIGURATION
+#=================================================
+
+ynh_script_progression "Adding application configuration files..."
+
+# Example of adding a config file from templates (customize as needed)
+ynh_config_add --template="some_config_file" --destination="$install_dir/some_config_file"
+chmod 400 "$install_dir/some_config_file"
+chown "$app:$app" "$install_dir/some_config_file"
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+
+ynh_script_progression "Adding system-related configurations..."
+
+# Add PHP-FPM config if the app uses PHP
+ynh_config_add_phpfpm
+
+# Add nginx config
+ynh_config_add_nginx
+
+# Add systemd service config (if app runs as a systemd service)
+ynh_config_add_systemd
+
+# Register the service with YunoHost for admin interface integration
+yunohost service add "$app" --description="Ente Photos app service" --log="/var/log/$app/$app.log"
+
+# Add logrotate config if logs exist
+ynh_config_add_logrotate
+
+# Add Fail2Ban config (example with nginx error log and regex for failed logins)
+ynh_config_add_fail2ban --logpath="/var/log/nginx/${domain}-error.log" --failregex="Failed login"
+
+#=================================================
+# SETUP APPLICATION WITH CURL (OPTIONAL)
+#=================================================
+
+# If the app requires final setup via web forms, automate using curl here
+ynh_script_progression "Finalizing installation..."
+# Example: ynh_local_curl "/$path" "admin_password=$password" etc.
+
+#=================================================
+# START SYSTEMD SERVICE
+#=================================================
+
+ynh_script_progression "Starting the service..."
+
+ynh_systemctl --service="$app" --action="start"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Installation completed: $app"

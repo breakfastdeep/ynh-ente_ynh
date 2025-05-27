@@ -1,0 +1,14 @@
+[Unit]
+Description=Ente Museum Service
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/entephotos/server
+ExecStart=/usr/bin/ente-museum --config /var/www/entephotos/server/museum.yaml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
