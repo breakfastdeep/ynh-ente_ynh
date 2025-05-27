@@ -7,7 +7,7 @@ name = "Ente Photos (Standalone)"
 version = "0.1~ynh1"
 license = "AGPL-3.0-or-later"
 url = "https://github.com/ente-io/ente"
-description.en = "Stand-alone Ente self-hosted encrypted photo backup and sharing server"
+description.en = "Stand‐alone Ente self-hosted encrypted photo backup and sharing server"
 description.tr = "Docker’sız, kendi kendine barındırılan şifreli fotoğraf yedekleme ve paylaşım sunucusu"
 
 maintainers = ["breakfastdeep"]
@@ -24,8 +24,8 @@ ram.build = "500M"
 ram.runtime = "500M"
 
 [install]
-# <-- exec must be directly under [install], not inside an option table
-exec = "scripts/install"
+  # <-- use 'script', not 'exec'
+  script = "scripts/install"
 
   [install.domain]
   type = "domain"
@@ -43,6 +43,7 @@ exec = "scripts/install"
   help.tr = "Ente Photos yönetici kullanıcısı şifresi"
 
 [resources]
+
   [resources.system_user]
   name = "entephotos"
 
