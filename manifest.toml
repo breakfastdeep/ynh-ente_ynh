@@ -24,10 +24,9 @@ ram.build = "500M"
 ram.runtime = "500M"
 
 [install]
-# Burada exec (veya script) doğrudan tanımlanmalı, alt tabloların dışına:
-exec = "scripts/install"
+script = "scripts/install"
 
-# Aşağıdakiler inline atamalar (sorular) olarak tanımlanıyor:
+# Inline question definitions
 domain.type = "domain"
 path.type = "path"
 path.default = "/entephotos"
