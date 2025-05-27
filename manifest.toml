@@ -81,7 +81,7 @@ ram.runtime = "300M"
   path = "/home/yunohost.app/entephotos"
 
   [resources.permissions]
-  main.url = "/"
+  main.url = "/ente"
 
   [resources.ports]
   # YunoHost rastgele reverse proxy portu atar, elle genellikle yazılmaz.
