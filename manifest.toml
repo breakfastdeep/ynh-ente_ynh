@@ -17,33 +17,26 @@ yunohost = ">= 12.0"
 helpers_version = "2.14"
 architectures = "all"
 multi_instance = false
-ldap = "true"
-sso = "false"
+ldap = true
+sso = false
 disk = "1G"
 ram.build = "500M"
 ram.runtime = "500M"
 
 [install]
-  # <-- use 'script', not 'exec'
-  script = "scripts/install"
+# Burada exec (veya script) doğrudan tanımlanmalı, alt tabloların dışına:
+exec = "scripts/install"
 
-  [install.domain]
-  type = "domain"
-
-  [install.path]
-  type = "path"
-  default = "/entephotos"
-
-  [install.admin]
-  type = "user"
-
-  [install.password]
-  type = "password"
-  help.en = "Password for the Ente Photos admin user"
-  help.tr = "Ente Photos yönetici kullanıcısı şifresi"
+# Aşağıdakiler inline atamalar (sorular) olarak tanımlanıyor:
+domain.type = "domain"
+path.type = "path"
+path.default = "/entephotos"
+admin.type = "user"
+password.type = "password"
+password.help.en = "Password for the Ente Photos admin user"
+password.help.tr = "Ente Photos yönetici kullanıcısı şifresi"
 
 [resources]
-
   [resources.system_user]
   name = "entephotos"
 
