@@ -10,7 +10,7 @@ url = "https://github.com/ente-io/ente"
 description.en = "Stand-alone Ente self-hosted encrypted photo backup and sharing server"
 description.tr = "Docker’sız, kendi kendine barındırılan şifreli fotoğraf yedekleme ve paylaşım sunucusu"
 
-maintainers = ["yourgithubusername"]
+maintainers = ["breakfastdeep"]
 
 [integration]
 yunohost = ">= 12.0"
@@ -24,7 +24,9 @@ ram.build = "500M"
 ram.runtime = "500M"
 
 [install]
-  # sorulacak parametreler
+# <-- exec must be directly under [install], not inside an option table
+exec = "scripts/install"
+
   [install.domain]
   type = "domain"
 
@@ -40,31 +42,21 @@ ram.runtime = "500M"
   help.en = "Password for the Ente Photos admin user"
   help.tr = "Ente Photos yönetici kullanıcısı şifresi"
 
-  # hangi script çalışacak
-  exec = "scripts/install"
-
 [resources]
-  # Sistem kullanıcı
   [resources.system_user]
   name = "entephotos"
 
-  # Uygulamanın kök dizini
   [resources.install_dir]
   path = "/var/www/entephotos"
 
-  # Veri dizini
   [resources.data_dir]
   path = "/home/yunohost.app/entephotos"
-  
-  # Reverse-proxy için nginx
+
   [resources.permissions]
   main.url = "/entephotos"
 
-  # Uygulamanın çalışması için ihtiyaç duyduğu apt paketleri
   [resources.apt]
   packages = "git golang-go build-essential pkg-config nodejs npm libsodium-dev mysql-server"
 
-  # MySQL veritabanı tanımı
   [resources.database]
   type = "mysql"
-  # Kullanıcı, veritabanı ve şifreyi YunoHost otomatik oluşturacak ve script içinde yüklenecek
