@@ -69,7 +69,7 @@ ram.runtime = "300M"
 
     [resources.sources.main]
     url = "https://github.com/ente-io/ente/archive/refs/heads/main.tar.gz"
-    sha256 = "24B12283BA54FDC7D65DD747A3927190EBBD2DA1575D362D52B3E71B576D6485"
+    sha256 = "24b12283ba54fdc7d65dd747a3927190ebbd2da1575d362d52b3e71b576d6485"
 
   [resources.system_user]
   name = "entephotos"
