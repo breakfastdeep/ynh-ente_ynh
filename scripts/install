@@ -1,99 +1,61 @@
 #!/bin/bash
-
-#=================================================
-# IMPORT GENERIC HELPERS
-#=================================================
 source _common.sh
-source /usr/share/yunohost/helpers
 
-#=================================================
-# SETUP VARIABLES FROM MANIFEST/SETTINGS
-#=================================================
-app=$app                        # entephotos
-domain=$(ynh_app_setting_get --app=$app --key=domain)
-path=$(ynh_app_setting_get --app=$app --key=path)
-install_dir="/var/www/$app"     # where we put code
-data_dir=$(ynh_app_setting_get --app=$app --key=data_dir)
-db_name=$(ynh_app_setting_get --app=$app --key=db_name)
-db_user=$(ynh_app_setting_get --app=$app --key=db_user)
-db_pwd=$(ynh_app_setting_get --app=$app --key=db_pwd)
+# 1. Bağımlılıklar (Ubuntu/Debian)
+ynh_install_app_dependencies "
+    postgresql
+    golang-go
+    libsodium-dev
+    pkg-config
+    nodejs
+    npm
+    make
+"
 
-#=================================================
-# INSTALL OS DEPENDENCIES
-#=================================================
-ynh_script_progression "Installing system packages..."
-ynh_install_app_dependencies "git golang-go build-essential pkg-config nodejs npm libsodium-dev"
+# 2. PostgreSQL ayarları
+DB_PASSWORD=$(ynh_string_random 32)
+ynh_postgresql_create_user "ente_user" "$DB_PASSWORD"
+ynh_postgresql_create_db "ente_db" "ente_user"
 
-#=================================================
-# PREPARE DIRECTORIES
-#=================================================
-ynh_script_progression "Preparing directories..."
-mkdir -p "$install_dir/server" "$install_dir/web" "$data_dir"
-chown -R "$app:www-data" "$install_dir" "$data_dir"
+# 3. Ente kaynak kodları
+FINAL_PATH="/opt/ente"
+git clone https://github.com/ente-io/ente "$FINAL_PATH"
+cd "$FINAL_PATH"
+git checkout tags/v0.14.0  # Son kararlı sürüm
 
-#=================================================
-# SETUP DATABASE (MySQL via YunoHost resource)
-#=================================================
-ynh_script_progression "Database settings loaded: $db_name (user $db_user)"
+# 4. Go bağımlılıkları
+cd server
+go mod download
 
-#=================================================
-# INSTALL MUSEUM (Go API SERVER)
-#=================================================
-ynh_script_progression "Cloning and building Ente museum (API)..."
-git clone https://github.com/ente-io/ente.git "$install_dir/server"
-cd "$install_dir/server"
-go build -o /usr/bin/ente-museum cmd/museum/main.go
+# 5. Museum (server) derleme
+make build  # Veya: go build -o museum cmd/museum/main.go
 
-# Write museum configuration
-cat <<EOF >"$install_dir/server/museum.yaml"
-db:
-  host: 127.0.0.1
-  port: 3306
-  name: $db_name
-  user: $db_user
-  password: $db_pwd
-key:
-  # Generate or read from settings
-  encryption: $(head -c 32 /dev/urandom | base64)
-  hash: $(head -c 64 /dev/urandom | base64)
-jwt:
-  secret: $(head -c 32 /dev/urandom | base64 | tr '+/' '-_')
-s3:
-  are_local_buckets: true
-  # No S3, use local storage under $data_dir
-EOF
-
-#=================================================
-# INSTALL WEB (Node.js)
-#=================================================
-ynh_script_progression "Cloning and building Ente web UI..."
-git clone https://github.com/ente-io/web.git "$install_dir/web"
-cd "$install_dir/web"
-npm install --unsafe-perm
+# 6. Web arayüzü derleme
+cd ../web
+npm install
 npm run build
 
-#=================================================
-# SYSTEMD SERVICE FILES
-#=================================================
-ynh_script_progression "Configuring systemd services..."
+# 7. Ortam değişkenleri
+cat > "$FINAL_PATH/.env" << EOF
+ENTE_DB_USER=ente_user
+ENTE_DB_PASSWORD=$DB_PASSWORD
+ENTE_DB_NAME=ente_db
+ENTE_DB_HOST=localhost
+ENTE_ENCRYPTION_KEY=$(ynh_string_random 64)
+ENTE_HTTP_PORT=8080
+ENTE_DATA_DIR=$FINAL_PATH/data
+ENTE_ADMIN_EMAIL=$admin_email
+EOF
 
-# Museum service
-ynh_config_add systemd --template="conf/ente-museum.service" --destination="/etc/systemd/system/ente-museum.service"
+# 8. Systemd servisi
+ynh_add_systemd_config --service="ente-museum" --template="../conf/museum.service"
 
-# Web service
-ynh_config_add systemd --template="conf/ente-web.service" --destination="/etc/systemd/system/ente-web.service"
+# 9. Nginx konfigürasyonu
+ynh_add_nginx_config --template="../conf/nginx.conf"
 
-systemctl daemon-reload
-systemctl enable ente-museum ente-web
-systemctl start ente-museum ente-web
+# 10. Veri dizini
+mkdir -p "$FINAL_PATH/data"
+chown -R ente:ente "$FINAL_PATH"
 
-#=================================================
-# NGINX CONFIGURATION
-#=================================================
-ynh_script_progression "Adding Nginx configuration..."
-ynh_config_add nginx --template="conf/nginx.conf"
-
-#=================================================
-# FINALIZE
-#=================================================
-ynh_script_progression "Installation complete! Access your app at https://$domain$path"
+# 11. Admin kullanıcı oluştur
+sudo -u ente bash -c "cd $FINAL_PATH/server && ./museum --createadmin --email $admin_email"

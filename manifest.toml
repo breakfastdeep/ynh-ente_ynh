@@ -1,55 +1,25 @@
-# :#schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/manifest.v2.schema.json
-
+[general]
+id = "ente"
 packaging_format = 2
+name.en = "Ente"
+description.en = "End-to-end encrypted photo storage"
+version = "0.14.0~ynh2"
+license = "AGPL-3.0-only"
+maintainer.name = "Ente Team"
+maintainer.email = "support@ente.io"
+url = "https://ente.io"
 
-id = "entephotos"
-name = "Ente Photos (Standalone)"
-version = "0.1~ynh1"
-license = "AGPL-3.0-or-later"
-url = "https://github.com/ente-io/ente"
-description.en = "Stand‐alone Ente self-hosted encrypted photo backup and sharing server"
-description.tr = "Docker’sız, kendi kendine barındırılan şifreli fotoğraf yedekleme ve paylaşım sunucusu"
+[requirements]
+yunohost = ">= 11.8.4"
+ram.runtime = 2048  # 2GB RAM
+disk = 20480  # 20GB
+architecture = "amd64"  # Go derlemesi için
 
-maintainers = ["breakfastdeep"]
+[services]
+nginx.allowed_domains = ["DOMAIN"]
+postgresql.database = "ente"
+postgresql.user = "ente_user"
 
-[integration]
-yunohost = ">= 12.0"
-helpers_version = "2.14"
-architectures = "all"
-multi_instance = false
-ldap = true
-sso = false
-disk = "1G"
-ram.build = "500M"
-ram.runtime = "500M"
-
-[install]
-script = "scripts/install"
-
-# Inline question definitions
-domain.type = "domain"
-path.type = "path"
-path.default = "/entephotos"
-admin.type = "user"
-password.type = "password"
-password.help.en = "Password for the Ente Photos admin user"
-password.help.tr = "Ente Photos yönetici kullanıcısı şifresi"
-
-[resources]
-  [resources.system_user]
-  name = "entephotos"
-
-  [resources.install_dir]
-  path = "/var/www/entephotos"
-
-  [resources.data_dir]
-  path = "/home/yunohost.app/entephotos"
-
-  [resources.permissions]
-  main.url = "/entephotos"
-
-  [resources.apt]
-  packages = "git golang-go build-essential pkg-config nodejs npm libsodium-dev mysql-server"
-
-  [resources.database]
-  type = "mysql"
+[arguments.install]
+domain = { type = "domain", ask.en = "Installation domain" }
+admin_email = { type = "string", ask.en = "Admin email" }
