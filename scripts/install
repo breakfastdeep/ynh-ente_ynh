@@ -1,61 +1,95 @@
 #!/bin/bash
+
+#=================================================
+# IMPORT YUNOHELPERS
+#=================================================
 source _common.sh
+source /usr/share/yunohost/helpers
 
-# 1. Bağımlılıklar (Ubuntu/Debian)
-ynh_install_app_dependencies "
-    postgresql
-    golang-go
-    libsodium-dev
-    pkg-config
-    nodejs
-    npm
-    make
-"
+#=================================================
+# 1. Başlatma Mesajı
+#=================================================
+ynh_script_progression --message="Ente kurulumu başlatılıyor..."
 
-# 2. PostgreSQL ayarları
-DB_PASSWORD=$(ynh_string_random 32)
-ynh_postgresql_create_user "ente_user" "$DB_PASSWORD"
-ynh_postgresql_create_db "ente_db" "ente_user"
+#=================================================
+# 2. Apt paketlerini yükle
+#=================================================
+ynh_script_progression --message="Gerekli paketler yükleniyor..."
+ynh_install_app_dependencies "docker.io docker-compose-plugin curl"
 
-# 3. Ente kaynak kodları
+#=================================================
+# 3. Kurulum dizinini hazırla
+#=================================================
+ynh_script_progression --message="Kurulum dizini oluşturuluyor..."
 FINAL_PATH="/opt/ente"
-git clone https://github.com/ente-io/ente "$FINAL_PATH"
-cd "$FINAL_PATH"
-git checkout tags/v0.14.0  # Son kararlı sürüm
+mkdir -p "$FINAL_PATH"
+chown -R $app: "$FINAL_PATH"
 
-# 4. Go bağımlılıkları
-cd server
-go mod download
+#=================================================
+# 4. Quickstart betiğini kopyala
+#=================================================
+ynh_script_progression --message="Quickstart script hazırlanıyor..."
+cp "../conf/quickstart.sh" "$FINAL_PATH/quickstart.sh"
+chmod +x "$FINAL_PATH/quickstart.sh"
 
-# 5. Museum (server) derleme
-make build  # Veya: go build -o museum cmd/museum/main.go
+#=================================================
+# 5. Kullanıcı girdileri
+#=================================================
+domain=$(ynh_app_setting_get --app=$app --key=domain)
+admin_email=$(ynh_app_setting_get --app=$app --key=admin_email)
 
-# 6. Web arayüzü derleme
-cd ../web
-npm install
-npm run build
+#=================================================
+# 6. Rastgele şifre ve anahtar oluştur
+#=================================================
+encryption_key=$(ynh_string_random 64)
+db_password=$(ynh_string_random 32)
+redis_password=$(ynh_string_random 32)
 
-# 7. Ortam değişkenleri
-cat > "$FINAL_PATH/.env" << EOF
-ENTE_DB_USER=ente_user
-ENTE_DB_PASSWORD=$DB_PASSWORD
-ENTE_DB_NAME=ente_db
-ENTE_DB_HOST=localhost
-ENTE_ENCRYPTION_KEY=$(ynh_string_random 64)
+#=================================================
+# 7. Ortam değişkenlerini .env dosyasına yaz
+#=================================================
+ynh_script_progression --message="Ortam değişkenleri ayarlanıyor..."
+cat > "$FINAL_PATH/.env" <<EOF
+ENTE_HOSTNAME=$domain
 ENTE_HTTP_PORT=8080
-ENTE_DATA_DIR=$FINAL_PATH/data
+ENTE_HTTPS_PORT=8443
+ENTE_ENCRYPTION_KEY=$encryption_key
+ENTE_DB_PASSWORD=$db_password
+ENTE_REDIS_PASSWORD=$redis_password
 ENTE_ADMIN_EMAIL=$admin_email
 EOF
 
-# 8. Systemd servisi
-ynh_add_systemd_config --service="ente-museum" --template="../conf/museum.service"
+#=================================================
+# 8. Quickstart’yı çalıştır (--non-interactive)
+#=================================================
+ynh_script_progression --message="Docker konteynerleri başlatılıyor..."
+sudo -u $app bash <<EOSCRIPT
+cd "$FINAL_PATH"
+export ENTE_HOSTNAME="$domain"
+export ENTE_HTTP_PORT="8080"
+export ENTE_HTTPS_PORT="8443"
+export ENTE_ENCRYPTION_KEY="$encryption_key"
+export ENTE_DB_PASSWORD="$db_password"
+export ENTE_REDIS_PASSWORD="$redis_password"
+export ENTE_ADMIN_EMAIL="$admin_email"
+./quickstart.sh --non-interactive
+EOSCRIPT
 
-# 9. Nginx konfigürasyonu
-ynh_add_nginx_config --template="../conf/nginx.conf"
+#=================================================
+# 9. Nginx ayarlarını ekle
+#=================================================
+ynh_script_progression --message="Nginx konfigurasyonu ekleniyor..."
+ynh_config_add --template="../conf/nginx.conf" --domain="$domain"
 
-# 10. Veri dizini
-mkdir -p "$FINAL_PATH/data"
-chown -R ente:ente "$FINAL_PATH"
+#=================================================
+# 10. Firewall kuralları
+#=================================================
+ynh_script_progression --message="Firewall ayarları yapılıyor..."
+yunohost firewall allow Both 80
+yunohost firewall allow Both 443
 
-# 11. Admin kullanıcı oluştur
-sudo -u ente bash -c "cd $FINAL_PATH/server && ./museum --createadmin --email $admin_email"
+#=================================================
+# 11. Bitiriş
+#=================================================
+ynh_script_progression --message="Ente başarıyla kuruldu!"
+echo "Yönetim paneline erişim: https://$domain"

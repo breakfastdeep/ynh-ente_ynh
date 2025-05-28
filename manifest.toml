@@ -1,25 +1,53 @@
-[general]
-id = "ente"
+# :#schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/manifest.v2.schema.json
+
 packaging_format = 2
-name.en = "Ente"
-description.en = "End-to-end encrypted photo storage"
-version = "0.14.0~ynh2"
-license = "AGPL-3.0-only"
-maintainer.name = "Ente Team"
-maintainer.email = "support@ente.io"
-url = "https://ente.io"
 
-[requirements]
-yunohost = ">= 11.8.4"
-ram.runtime = 2048  # 2GB RAM
-disk = 20480  # 20GB
-architecture = "amd64"  # Go derlemesi için
+id = "entephotos"
+name = "Ente Photos (Docker Quickstart)"
+version = "1.0~ynh1"
+license = "AGPL-3.0-or-later"
+url = "https://github.com/ente-io/ente"
+description.en = "Quickstart Ente deployment using Docker on YunoHost"
+description.tr = "YunoHost üzerinde Docker ile hızlı Ente kurulumu"
 
-[services]
-nginx.allowed_domains = ["DOMAIN"]
-postgresql.database = "ente"
-postgresql.user = "ente_user"
+maintainers = ["breakfastdeep"]
 
-[arguments.install]
-domain = { type = "domain", ask.en = "Installation domain" }
-admin_email = { type = "string", ask.en = "Admin email" }
+[integration]
+yunohost = ">= 12.0"
+helpers_version = "2.14"
+architectures = ["amd64","arm64","armhf"]
+multi_instance = false
+ldap = false
+sso = false
+disk = "500M"
+ram.build = "200M"
+ram.runtime = "300M"
+
+[install]
+script = "scripts/install"
+
+# Kullanıcıdan istenecek sorular (inline biçimde)
+domain.type           = "domain"
+admin_email.type      = "string"
+admin_email.ask.en    = "Enter the admin email for Ente"
+admin_email.ask.tr    = "Ente için yönetici e-posta adresini girin"
+
+[resources]
+
+  [resources.system_user]
+  name = "entephotos"
+
+  [resources.install_dir]
+  path = "/opt/ente"
+
+  [resources.data_dir]
+  path = "/opt/ente/data"
+
+  [resources.permissions]
+  main.url = "/"
+
+  [resources.apt]
+  packages = "docker.io docker-compose-plugin curl"
+
+  # Docker Compose içindeki quickstart.sh zaten DB/Redis/MinIO ayarlarını yapıyor,
+  # o yüzden burada ek database tanımına gerek yok.
